@@ -1,5 +1,5 @@
 import requests
-from pymongo import MongoClient
+from pymongo import MongoClient, errors
 from threading import Thread
 import _strptime
 from datetime import datetime
@@ -32,14 +32,14 @@ class DataSeeker(object):
         try:
             ans = ans.json()
         except Exception as e:
-            print ans, datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d')
+            print ans, datetime.fromtimestamp(date).strftime('%Y-%m-%d')
             no_good_dates.append(date)
             return
-        print count, datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d'), coin
+        print count, datetime.fromtimestamp(date).strftime('%Y-%m-%d'), coin
         results = {"end_price": float(ans[0]["rate"]), "start_price": float(ans[-1]["rate"]), "b_value": 0,
                    "s_value": 0,
                    "percentage": 100 * ((float(ans[0]["rate"]) - float(ans[-1]["rate"])) / float(ans[-1]["rate"])),
-                   "date": datetime.strptime(date, "%Y-%m-%d")}
+                   "date": datetime.fromtimestamp(date)}
         for s in ans:
             if s["type"] == "buy":
                 results["b_value"] += float(s['amount'])
@@ -48,7 +48,10 @@ class DataSeeker(object):
         collection.insert_one(results)
 
     def run_collection(self, coin):
-        self.bits_db.create_collection(coin)
+        try:
+            self.bits_db.create_collection(coin)
+        except errors.CollectionInvalid:
+            pass
         collection = self.bits_db.get_collection(coin)
         count = 0
         no_good_dates = []
